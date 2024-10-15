@@ -44,6 +44,8 @@ class KMA:
         self.pop = None
         self.fx = None
 
+        self.gen = 0
+
     def evaluation(self, x: np.ndarray) -> float:
         """
         Evaluate one komodo individual for the given function id
@@ -693,7 +695,7 @@ class KMA:
         # Improve rate to examine the benchmark function
         num_eva = 0
         # Number of evalutions
-        gen = 0
+        self.gen = 0
         # Generation
         max_gen_exam1 = 100
         # Maximum generation of the first examination
@@ -709,8 +711,8 @@ class KMA:
         gen_improve = 0
         # Generation counter to check the improvement condition
 
-        while gen < max_gen_exam2:
-            gen += 1
+        while self.gen < max_gen_exam2:
+            self.gen += 1
             num_eva += self.pop_size
 
             self.big_males = np.copy(self.pop[: self.num_BM, :])
@@ -762,14 +764,14 @@ class KMA:
 
             if opt_val < self.one_elit_fx:
                 gen_improve += 1
-                improve_rate = gen_improve / gen
+                improve_rate = gen_improve / self.gen
                 self.one_elit_fx = opt_val
 
             if opt_val <= self.fthreshold_fx:
                 is_global = 1
                 break
 
-            if gen == max_gen_exam1:
+            if self.gen == max_gen_exam1:
                 if improve_rate < 0.5:
                     is_global = 0
                     break
@@ -964,7 +966,7 @@ class KMA:
                 self.pop = self.pop[rand_ind, :]
 
                 evo_pop_size = np.hstack((evo_pop_size, ada_pop_size))
-                gen += 1
+                self.gen += 1
         # best_indiv = np.zeros(self.dimension)
         # opt_val = 0.0
         # num_eva = self.max_num_eva
