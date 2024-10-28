@@ -179,6 +179,9 @@ class Benchmark:
                     100 * (x[1:dim] - (x[0 : dim - 1] ** 2)) ** 2
                     + (x[0 : dim - 1] - 1) ** 2
                 )
+                if result < 47:
+                    print("error")
+
                 return result
             case 6:
                 # Step
