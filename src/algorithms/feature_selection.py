@@ -5,7 +5,7 @@
 import numpy as np
 
 
-class Benchmark:
+class FeatureSelection:
     @staticmethod
     def get_function(dimension: int, function_id: int) -> tuple:
         return Benchmark.get_params(dimension, function_id)
