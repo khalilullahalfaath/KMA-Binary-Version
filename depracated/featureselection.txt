@@ -1,0 +1,246 @@
+import numpy as np
+from typing import Tuple, Callable, List
+from dataclasses import dataclass
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+from sklearn.metrics import accuracy_score, f1_score
+import math
+
+
+@dataclass
+class FeatureSelectionResult:
+    """Class to store feature selection results"""
+
+    selected_features: np.ndarray  # Boolean mask of selected features
+    fitness_value: float  # Fitness/objective value
+    n_selected: int  # Number of selected features
+    accuracy: float  # Classification accuracy
+    f1_score: float  # F1 score
+
+
+class TransferFunctions:
+    """Class containing various transfer functions for feature selection"""
+
+    @staticmethod
+    def s_shaped_1(x: float) -> float:
+        """Standard sigmoid function"""
+        return 1 / (1 + np.exp(-2 * x))
+
+    @staticmethod
+    def s_shaped_2(x: float) -> float:
+        """Hyperbolic tangent function"""
+        return 1 / (1 + np.exp(-x))
+
+    @staticmethod
+    def s_shaped_3(x: float) -> float:
+        """Modified sigmoid function"""
+        return 1 / (1 + np.exp(-x / 2))
+
+    @staticmethod
+    def v_shaped_1(x: float) -> float:
+        """Absolute value function"""
+        return abs(2 / math.pi * np.arctan(math.pi / 2 * x))
+
+    @staticmethod
+    def v_shaped_2(x: float) -> float:
+        """Modified absolute value function"""
+        return abs(np.tanh(x))
+
+    @staticmethod
+    def v_shaped_3(x: float) -> float:
+        """Scaled absolute value function"""
+        return abs(x)
+
+    @staticmethod
+    def time_varying(x: float, current_gen: int, max_gen: int) -> float:
+        """Time-varying transfer function"""
+        r = current_gen / max_gen  # Progress ratio
+        return 1 / (1 + np.exp(-2 * (1 + r) * x))
+
+
+class FeatureSelection:
+    def __init__(
+        self,
+        X: np.ndarray,
+        y: np.ndarray,
+        function_id: int = 1,
+        transfer_function: str = "s_shaped_1",
+        n_estimators: int = 100,
+        cv_folds: int = 5,
+        random_state: int = 42,
+    ):
+        """
+        Initialize Feature Selection class
+
+        Args:
+            X: Input features matrix of shape (n_samples, n_features)
+            y: Target values array of shape (n_samples,)
+            function_id: ID of the objective function to use
+            transfer_function: Name of the transfer function to use
+            n_estimators: Number of trees in RandomForest
+            cv_folds: Number of cross-validation folds
+            random_state: Random seed for reproducibility
+        """
+        self.X = X
+        self.y = y
+        self.n_features = X.shape[1]
+        self.function_id = function_id
+        self.cv_folds = cv_folds
+        self.random_state = random_state
+
+        # Initialize RandomForest classifier
+        self.classifier = RandomForestClassifier(
+            n_estimators=n_estimators, random_state=random_state
+        )
+
+        # Set transfer function
+        self.transfer_functions = {
+            "s_shaped_1": TransferFunctions.s_shaped_1,
+            "s_shaped_2": TransferFunctions.s_shaped_2,
+            "s_shaped_3": TransferFunctions.s_shaped_3,
+            "v_shaped_1": TransferFunctions.v_shaped_1,
+            "v_shaped_2": TransferFunctions.v_shaped_2,
+            "v_shaped_3": TransferFunctions.v_shaped_3,
+            "time_varying": TransferFunctions.time_varying,
+        }
+        self.transfer_function = transfer_function
+
+        # Get function parameters from benchmark
+        self.n_var, self.ub, self.lb, self.min_val = Benchmark.get_params(
+            dimension=self.n_features, function_id=self.function_id
+        )
+
+    def apply_transfer_function(
+        self, x: np.ndarray, current_gen: int = None, max_gen: int = None
+    ) -> np.ndarray:
+        """
+        Apply transfer function to convert continuous values to binary
+
+        Args:
+            x: Continuous-valued solution array
+            current_gen: Current generation (for time-varying transfer function)
+            max_gen: Maximum generations (for time-varying transfer function)
+
+        Returns:
+            np.ndarray: Binary solution array
+        """
+        transfer_func = self.transfer_functions[self.transfer_function]
+
+        if self.transfer_function == "time_varying":
+            if current_gen is None or max_gen is None:
+                raise ValueError(
+                    "current_gen and max_gen must be provided for time-varying transfer function"
+                )
+            probabilities = np.array(
+                [transfer_func(val, current_gen, max_gen) for val in x.flatten()]
+            )
+        else:
+            probabilities = np.array([transfer_func(val) for val in x.flatten()])
+
+        # For V-shaped functions, use probabilistic conversion
+        if self.transfer_function.startswith("v_shaped"):
+            return np.where(np.random.random(probabilities.shape) < probabilities, 1, 0)
+        # For S-shaped functions, use threshold at 0.5
+        else:
+            return np.where(probabilities >= 0.5, 1, 0)
+
+    def evaluate(
+        self, x: np.ndarray, current_gen: int = None, max_gen: int = None
+    ) -> float:
+        """
+        Evaluate feature selection solution
+
+        Args:
+            x: Solution vector indicating selected features
+            current_gen: Current generation (for time-varying transfer function)
+            max_gen: Maximum generations (for time-varying transfer function)
+
+        Returns:
+            float: Evaluation score (lower is better)
+        """
+        # Ensure proper shape
+        if x.ndim != 2 and x.shape[0] != 1:
+            x = x.reshape(1, -1)
+
+        # Convert to binary using transfer function
+        x_binary = self.apply_transfer_function(x, current_gen, max_gen)
+
+        # If no features selected, return worst possible value
+        if np.sum(x_binary) == 0:
+            return float("inf")
+
+        # Select features
+        X_selected = self.X[:, x_binary.astype(bool)]
+
+        # Calculate classification performance
+        cv_scores = cross_val_score(
+            self.classifier, X_selected, self.y, cv=self.cv_folds, scoring="accuracy"
+        )
+
+        classification_error = 1 - np.mean(cv_scores)
+
+        # Calculate feature ratio penalty
+        n_selected = np.sum(x_binary)
+        feature_ratio = n_selected / self.n_features
+        alpha = 0.01  # Weight for the penalty term
+
+        # Final fitness (combine classification error and feature ratio)
+        fitness = classification_error + alpha * feature_ratio
+
+        return fitness
+
+    def select_features(
+        self, solution: np.ndarray, current_gen: int = None, max_gen: int = None
+    ) -> FeatureSelectionResult:
+        """
+        Convert optimization solution to actual feature selection
+
+        Args:
+            solution: Solution vector indicating selected features
+            current_gen: Current generation (for time-varying transfer function)
+            max_gen: Maximum generations (for time-varying transfer function)
+
+        Returns:
+            FeatureSelectionResult: Object containing selection results
+        """
+        # Convert to binary
+        binary_selection = self.apply_transfer_function(solution, current_gen, max_gen)
+
+        # Calculate fitness
+        fitness = self.evaluate(solution, current_gen, max_gen)
+
+        # Get selected features
+        X_selected = self.X[:, binary_selection.astype(bool)]
+
+        # Train classifier on selected features
+        self.classifier.fit(X_selected, self.y)
+        y_pred = self.classifier.predict(X_selected)
+
+        # Calculate metrics
+        accuracy = accuracy_score(self.y, y_pred)
+        f1 = f1_score(self.y, y_pred, average="weighted")
+
+        return FeatureSelectionResult(
+            selected_features=binary_selection,
+            fitness_value=fitness,
+            n_selected=np.sum(binary_selection),
+            accuracy=accuracy,
+            f1_score=f1,
+        )
+
+    def get_selected_features(
+        self, solution: np.ndarray, current_gen: int = None, max_gen: int = None
+    ) -> np.ndarray:
+        """
+        Get the selected features matrix based on solution
+
+        Args:
+            solution: Solution vector indicating selected features
+            current_gen: Current generation (for time-varying transfer function)
+            max_gen: Maximum generations (for time-varying transfer function)
+
+        Returns:
+            np.ndarray: Matrix with only selected features
+        """
+        selection_result = self.select_features(solution, current_gen, max_gen)
+        return self.X[:, selection_result.selected_features.astype(bool)]

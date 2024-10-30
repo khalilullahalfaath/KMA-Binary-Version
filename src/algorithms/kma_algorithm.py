@@ -2,12 +2,20 @@ import numpy as np
 from scipy.special import gamma
 from typing import Tuple, List
 from src.algorithms.benchmarks import Benchmark
+from src.algorithms.feature_selection import FeatureSelection
 import math
 
 
 class KMA:
     def __init__(
-        self, function_id: int, dimension: int, max_num_eva: int, pop_size: int
+        self,
+        function_id: int,
+        dimension: int,
+        max_num_eva: int,
+        pop_size: int,
+        x_data: np.ndarray = None,
+        y_data: np.ndarray = None,
+        transfer_function: str = "",
     ):
         self.function_id = function_id  # identity of the benchmark function
         self.dimension = (
@@ -18,10 +26,31 @@ class KMA:
         self.min_ada_pop_size = pop_size * 4  # minimum adaptive size
         self.max_ada_pop_size = pop_size * 40  # maximum adaptive size
 
-        # get a bechmark function
-        self.nvar, self.ub, self.lb, self.fthreshold_fx = Benchmark.get_function(
-            self.dimension, self.function_id
-        )
+        if self.function_id != 0:
+            # get a bechmark function
+            self.nvar, self.ub, self.lb, self.fthreshold_fx = Benchmark.get_function(
+                self.dimension, self.function_id
+            )
+        else:
+            # get a feature selection problem
+            if x_data is None or y_data is None:
+                raise ValueError(
+                    "x and y cannot be empty for feature selection problem"
+                )
+
+            # set x and y
+            self.x_data = x_data
+            self.y_data = y_data
+
+            self.nvar, self.ub, self.lb, self.fthreshold_fx = (
+                FeatureSelection.get_problem(x_data, y_data)
+            )
+
+            # check if transfer function exist to perform trimr
+            if transfer_function == "":
+                raise ValueError("transfer_function cannot be empty")
+
+            self.transfer_function = transfer_function
 
         self.ra = np.ones((1, self.nvar)) * self.ub
         self.rb = np.ones((1, self.nvar)) * self.lb
@@ -46,6 +75,9 @@ class KMA:
         self.fx = None
 
         self.gen = 0
+        self.max_gen_exam1 = 100
+        self.max_gen_exam2 = 1000
+        self.num_eva = 0
 
     def evaluation(self, x: np.ndarray) -> float:
         """
@@ -62,7 +94,7 @@ class KMA:
             ArrayOutOfBoundError:
             DivideByZero
         """
-        return Benchmark.evaluate(x, self.function_id)
+        return FeatureSelection.evaluate(x, self.function_id)
 
     def pop_cons_initialization(self, ps: int) -> np.ndarray:
         """
@@ -145,10 +177,10 @@ class KMA:
 
             # new movement of big males
             new_big_males = np.copy(temp_small_males[ss, :]) + np.copy(vm)
-            new_big_males = self.trimr(new_big_males)
+            new_big_males, fitness_value = self.trimr(new_big_males)
 
             temp_small_males[ss, :] = np.copy(new_big_males)
-            temp_small_males_fx[:, ss] = self.evaluation(new_big_males)
+            temp_small_males_fx[:, ss] = fitness_value
 
         self.big_males, self.big_males_fx = self.replacement(
             self.big_males, self.big_males_fx, temp_small_males, temp_small_males_fx
@@ -239,11 +271,10 @@ class KMA:
                     break
 
             new_big_males = temp_small_males[ss, :].copy() + vm.copy()
-            new_big_males = self.trimr(new_big_males.copy())
+            new_big_males, fitness_value = self.trimr(new_big_males.copy())
 
             temp_small_males[ss, :] = new_big_males.copy()
-            temp_small_males_fx[:, ss] = self.evaluation(new_big_males)
-
+            temp_small_males_fx[:, ss] = fitness_value
         self.big_males, self.big_males_fx = self.replacement(
             self.big_males, self.big_males_fx, temp_small_males, temp_small_males_fx
         )
@@ -344,9 +375,9 @@ class KMA:
                     break
 
             new_small_males = self.small_males[ww, :].copy() + vmlipir
-            new_small_males = self.trimr(new_small_males)
+            new_small_males, fitness_value = self.trimr(new_small_males)
             temp_weak_males[ww, :] = new_small_males
-            temp_weak_males_fx[:, ww] = self.evaluation(new_small_males)
+            temp_weak_males_fx[:, ww] = fitness_value
 
         self.small_males = temp_weak_males
         self.small_males_fx = temp_weak_males_fx
@@ -404,9 +435,9 @@ class KMA:
                     break
 
             new_small_males = self.small_males[ww, :].copy() + vmlipir
-            new_small_males = self.trimr(new_small_males)
+            new_small_males, fitness_value = self.trimr(new_small_males)
             temp_weak_males[ww, :] = new_small_males
-            temp_weak_males_fx[:, ww] = self.evaluation(new_small_males)
+            temp_weak_males_fx[:, ww] = fitness_value
 
         self.small_males = temp_weak_males
         self.small_males_fx = temp_weak_males_fx
@@ -442,8 +473,8 @@ class KMA:
             offsprings[1, ii] = (r_val * parent2[0, ii]) + (
                 (1 - r_val) * parent1[0, ii]
             )
-        offsprings[0, :] = self.trimr(offsprings[0, :])
-        offsprings[1, :] = self.trimr(offsprings[1, :])
+        offsprings[0, :], _ = self.trimr(offsprings[0, :])
+        offsprings[1, :], _ = self.trimr(offsprings[1, :])
 
         return offsprings
 
@@ -474,7 +505,7 @@ class KMA:
                     self.female[:, i] + ((2 * np.random.rand()) - 1) * max_step[0, i]
                 )
 
-        new_female = self.trimr(
+        new_female, _ = self.trimr(
             new_female
         )  # Limit the values into the given dimensional boundaries
         return new_female
@@ -535,9 +566,9 @@ class KMA:
                     f"new_x shape with a shape of {new_x.shape} in adding_pop is not correct. Must be (1,self.nvar)"
                 )
 
-        new_x = self.trimr(new_x)
+        new_x, fitness_value = self.trimr(new_x)
 
-        new_fx = self.evaluation(new_x)
+        new_fx = fitness_value
 
         if new_fx.shape != (1, 1):
             new_fx = new_fx.reshape(1, -1)
@@ -581,9 +612,9 @@ class KMA:
                     f"temp_x shape with a shape of {temp_x.shape} in reposition is not correct. Must be (1,self.nvar)"
                 )
 
-        temp_x = self.trimr(temp_x)
+        temp_x, fitness_value = self.trimr(temp_x)
 
-        temp_fx = self.evaluation(temp_x)
+        temp_fx = fitness_value
 
         if temp_fx.shape != (1, 1):
             temp_fx = temp_fx.reshape(1, -1)
@@ -659,7 +690,15 @@ class KMA:
 
         #     return 0
 
-        return np.clip(x, self.rb, self.ra)
+        if self.function_id != 0:
+            return np.clip(x, self.rb, self.ra), None
+        else:
+            if self.transfer_function == "time_varying":
+                return FeatureSelection.apply_transfer_function(
+                    x, self.transfer_function, self.num_eva, self.max_num_eva
+                )
+            # apply transfer function
+            return FeatureSelection.apply_transfer_function(x, self.transfer_function)
 
     def run(
         self,
@@ -693,14 +732,14 @@ class KMA:
         # Boolean to check if the global optimum is reached
         improve_rate = 0
         # Improve rate to examine the benchmark function
-        num_eva = 0
+        self.num_eva = 0
         # Number of evalutions
         self.gen = 0
         # Generation
-        max_gen_exam1 = 100
-        # Maximum generation of the first examination
-        max_gen_exam2 = 1000
-        # Maximum generation of the second examination
+        # self.max_gen_exam1 = 10
+        # # Maximum generation of the first examination
+        # self.max_gen_exam2 = 100
+        # # Maximum generation of the second examination
 
         fopt = []
         # Best-so-far fitness value in each generation
@@ -711,9 +750,9 @@ class KMA:
         gen_improve = 0
         # Generation counter to check the improvement condition
 
-        while self.gen < max_gen_exam2:
+        while self.gen < self.max_gen_exam2:
             self.gen += 1
-            num_eva += self.pop_size
+            self.num_eva += self.pop_size
 
             self.big_males = np.copy(self.pop[: self.num_BM, :])
             self.big_males_fx = np.copy(self.fx[:, : self.num_BM])
@@ -771,7 +810,7 @@ class KMA:
                 is_global = 1
                 break
 
-            if self.gen == max_gen_exam1:
+            if self.gen == self.max_gen_exam1:
                 if improve_rate < 0.5:
                     is_global = 0
                     break
@@ -782,7 +821,7 @@ class KMA:
         #
         #
 
-        if (not is_global) and num_eva <= self.max_num_eva:
+        if (not is_global) and self.num_eva <= self.max_num_eva:
             first_stage_pop = np.copy(self.pop)
             first_stage_pop_fx = np.copy(self.fx)
             swarm_size = first_stage_pop.shape[0]
@@ -812,7 +851,7 @@ class KMA:
             self.fx = np.hstack((first_stage_pop_fx, cons_pop_fx)).copy()
             self.one_elit_fx = np.min(self.fx[0])
 
-            while num_eva < self.max_num_eva:
+            while self.num_eva < self.max_num_eva:
                 ada_pop_size = self.pop.shape[0]
 
                 self.all_hq = np.array([]).reshape(0, self.nvar)
@@ -871,14 +910,18 @@ class KMA:
                         self.all_hq = np.vstack((self.all_hq, self.big_males))
                     else:
                         # Directly assign if within bounds
-                        self.all_hq[ind : ind + self.num_BM, :] = np.copy(self.big_males)
+                        self.all_hq[ind : ind + self.num_BM, :] = np.copy(
+                            self.big_males
+                        )
 
                     if ind + self.num_BM > self.all_hq_fx.shape[1]:
                         # Extend self.all_hq_fx horizontally
                         self.all_hq_fx = np.hstack((self.all_hq_fx, self.big_males_fx))
                     else:
                         # Directly assign if within bounds
-                        self.all_hq_fx[:, ind : ind + self.num_BM] = np.copy(self.big_males_fx)
+                        self.all_hq_fx[:, ind : ind + self.num_BM] = np.copy(
+                            self.big_males_fx
+                        )
 
                     # resulted new population
                     self.pop[ind : ind + swarm_size, :] = np.vstack(
@@ -897,7 +940,7 @@ class KMA:
                         )
                     )
 
-                    num_eva += swarm_size
+                    self.num_eva += swarm_size
 
                     opt_val = np.min(self.fx[0])
 
@@ -966,14 +1009,14 @@ class KMA:
                         self.pop = np.vstack((self.pop, new_pop)).copy()
                         self.fx = np.hstack((self.fx, new_pop_fx)).copy()
 
-                        num_eva += num_add_pop
+                        self.num_eva += num_add_pop
                     else:  # no adding population
                         for nn in range(self.pop.shape[0]):
                             self.pop[nn, :], self.fx[:, nn] = self.reposition(
                                 np.copy(self.pop[nn, :]).reshape(1, -1),
                                 np.copy(self.fx[:, nn]).reshape(1, -1),
                             )
-                        num_eva += self.pop.shape[0]
+                        self.num_eva += self.pop.shape[0]
                     gen_stagnan = 0
 
                 rand_ind = np.random.permutation(self.pop.shape[0])

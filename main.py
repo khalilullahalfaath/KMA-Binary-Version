@@ -5,13 +5,22 @@ from src.algorithms.kma_algorithm import KMA
 
 class KMADriver:
     def __init__(
-        self, function_id: int, dimension: int, max_num_eva: int, pop_size: int
+        self,
+        function_id: int,
+        dimension: int,
+        max_num_eva: int,
+        pop_size: int,
+        X: np.ndarray,
+        y: np.ndarray,
+        transfer_function_name,
     ):
         self.function_id = function_id
         self.dimension = dimension
         self.max_num_eva = max_num_eva
         self.pop_size = pop_size
-        self.kma = KMA(function_id, dimension, max_num_eva, pop_size)
+        self.kma = KMA(
+            function_id, dimension, max_num_eva, pop_size, X, y, transfer_function_name
+        )
 
     def run(self):
         best_indiv, opt_val, num_eva, fopt, fmean, proc_time, evo_pop_size = (
@@ -65,10 +74,19 @@ class KMADriver:
 
 
 if __name__ == "__main__":
-    function_id = 5
+    # function id = 0 -> feature selection
+    function_id = 0
+
+    # NOTE: Update dimension based on x_size
     dimension = 50
-    max_num_eva = 25000
+
+    X = np.random.rand(100, 10)
+    y = np.random.randint(0, 2, size=100)
+
+    max_num_eva = 500
     pop_size = 5
 
-    driver = KMADriver(function_id, dimension, max_num_eva, pop_size)
+    driver = KMADriver(
+        function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
+    )
     driver.run()
