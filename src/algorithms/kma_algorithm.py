@@ -4,6 +4,7 @@ from typing import Tuple, List
 from src.algorithms.benchmarks import Benchmark
 from src.algorithms.feature_selection import FeatureSelection
 import math
+from sklearn.model_selection import train_test_split
 
 
 class KMA:
@@ -38,12 +39,17 @@ class KMA:
                     "x and y cannot be empty for feature selection problem"
                 )
 
-            # set x and y
-            self.x_data = x_data
-            self.y_data = y_data
+            # # set x and y
+            # self.x_data = x_data
+            # self.y_data = y_data
 
             self.nvar, self.ub, self.lb, self.fthreshold_fx = (
                 FeatureSelection.get_problem(x_data, y_data)
+            )
+
+            # split data
+            self.X_train, self.X_test, self.y_train, self.y_test = train_test_split(
+                x_data, y_data, test_size=0.2, random_state=42
             )
 
             # check if transfer function exist to perform trimr
@@ -102,7 +108,9 @@ class KMA:
                     "binary_solution must be a binary array (only 0s and 1s)."
                 )
 
-        return FeatureSelection.evaluate(x, self.x_data, self.y_data)
+        return FeatureSelection.evaluate(
+            x, self.X_train, self.X_test, self.y_train, self.y_test
+        )
 
     def pop_cons_initialization(self, ps: int) -> np.ndarray:
         """
@@ -228,7 +236,7 @@ class KMA:
                 if new_female.shape() != (1, self.nvar):
                     raise ValueError("Array female after mutation is not correct")
 
-            fx = self.evaluation(new_female)
+            fx = np.array(self.evaluation(new_female))
 
             if fx < self.female_fx:
                 self.female = new_female.copy()
@@ -300,8 +308,8 @@ class KMA:
 
         if (winner_big_males_fx < self.female_fx) or (np.random.rand() < 0.5):
             offsprings = self.crossover(winner_big_males, self.female)
-            fx1 = self.evaluation(offsprings[0, :].reshape(1, -1)).reshape(1, -1)
-            fx2 = self.evaluation(offsprings[1, :].reshape(1, -1)).reshape(1, -1)
+            fx1 = self.evaluation(offsprings[0, :].reshape(1, -1))
+            fx2 = self.evaluation(offsprings[1, :].reshape(1, -1))
 
             # keep the best position of female
             if fx1 < fx2:
@@ -322,7 +330,7 @@ class KMA:
                 if new_female.shape() != (1, self.nvar):
                     raise ValueError("Array female after mutation is not correct")
 
-            fx = self.evaluation(new_female)
+            fx = np.array(self.evaluation(new_female))
 
             if fx < self.female_fx:
                 self.female = new_female.copy()

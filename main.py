@@ -4,6 +4,7 @@ from src.algorithms.kma_algorithm import KMA
 from sklearn.datasets import load_breast_cancer
 
 
+
 class KMADriver:
     def __init__(
         self,
@@ -88,7 +89,7 @@ if __name__ == "__main__":
     X_shape = X.shape
     y_shape = y.shape
 
-    max_num_eva = 500
+    max_num_eva = 25000
     pop_size = 5
 
     driver = KMADriver(

@@ -87,15 +87,21 @@ class FeatureSelection:
         return x_binary
 
     def evaluate(
-        binary_solution: np.ndarray, X_data: np.ndarray, y: np.ndarray
+        binary_solution: np.ndarray,
+        x_train: np.ndarray,
+        x_test: np.ndarray,
+        y_train: np.ndarray,
+        y_test: np.ndarray,
     ) -> float:
         """
         Evaluate feature selection solution
 
         Args:
-            binary_solution: Solution vector indicating selected features
-            X_data
-            y
+            binary_solution: Solution vector indicating selected features (0s and 1s)
+            x_train: Training data
+            x_test: Test data
+            y_train: Training labels
+            y_test: Test labels
 
         Returns:
             float: Evaluation score (lower is better)
@@ -109,26 +115,31 @@ class FeatureSelection:
             binary_solution = binary_solution.flatten()
 
         # Ensure proper shape for feature selection
-        if X_data.shape[1] != binary_solution.shape[0]:
+        if x_train.shape[1] != binary_solution.shape[0]:
             raise ValueError(
-                "The number of features in X_data must match the length of binary_solution."
+                "The number of features in x_train must match the length of binary_solution."
             )
-
-        # Ensure proper shape
         # Select features based on binary_solution
-        selected_features = X_data[:, binary_solution == 1]
+        selected_features_train = x_train[:, binary_solution == 1]
+        selected_features_test = x_test[:, binary_solution == 1]
 
         # If no features are selected, return a high penalty score
-        if selected_features.shape[1] == 0:
+        if selected_features_train.shape[1] == 0:
             return 1.0  # Maximum penalty, as no features selected
 
         # Initialize Random Forest Classifier
         clf = RandomForestClassifier(n_estimators=100, random_state=42)
 
-        # Evaluate using cross-validation to get accuracy
-        accuracy = cross_val_score(
-            clf, selected_features, y, cv=5, scoring="accuracy"
-        ).mean()
+        # Fit the model on the training data
+        clf.fit(selected_features_train, y_train)
+
+        # Predict on the test data
+        y_pred = clf.predict(selected_features_test)
+
+        # Evaluate accuracy
+        accuracy = accuracy_score(y_test, y_pred)
+
+        print(accuracy)
 
         # Objective: Minimize 1 - accuracy
-        return 100 - accuracy
+        return 1 - accuracy
