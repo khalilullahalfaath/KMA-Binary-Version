@@ -271,10 +271,10 @@ class KMA:
                     break
 
             new_big_males = temp_small_males[ss, :].copy() + vm.copy()
-            new_big_males, fitness_value = self.trimr(new_big_males.copy())
+            new_big_males = self.trimr(new_big_males.copy())
 
             temp_small_males[ss, :] = new_big_males.copy()
-            temp_small_males_fx[:, ss] = fitness_value
+            temp_small_males_fx[:, ss] = self.evaluation(new_big_males)
         self.big_males, self.big_males_fx = self.replacement(
             self.big_males, self.big_males_fx, temp_small_males, temp_small_males_fx
         )
@@ -375,9 +375,9 @@ class KMA:
                     break
 
             new_small_males = self.small_males[ww, :].copy() + vmlipir
-            new_small_males, fitness_value = self.trimr(new_small_males)
+            new_small_males = self.trimr(new_small_males)
             temp_weak_males[ww, :] = new_small_males
-            temp_weak_males_fx[:, ww] = fitness_value
+            temp_weak_males_fx[:, ww] = self.evaluation(new_small_males)
 
         self.small_males = temp_weak_males
         self.small_males_fx = temp_weak_males_fx
@@ -435,9 +435,9 @@ class KMA:
                     break
 
             new_small_males = self.small_males[ww, :].copy() + vmlipir
-            new_small_males, fitness_value = self.trimr(new_small_males)
+            new_small_males = self.trimr(new_small_males)
             temp_weak_males[ww, :] = new_small_males
-            temp_weak_males_fx[:, ww] = fitness_value
+            temp_weak_males_fx[:, ww] = self.evaluation(new_small_males)
 
         self.small_males = temp_weak_males
         self.small_males_fx = temp_weak_males_fx
@@ -473,8 +473,8 @@ class KMA:
             offsprings[1, ii] = (r_val * parent2[0, ii]) + (
                 (1 - r_val) * parent1[0, ii]
             )
-        offsprings[0, :], _ = self.trimr(offsprings[0, :])
-        offsprings[1, :], _ = self.trimr(offsprings[1, :])
+        offsprings[0, :] = self.trimr(offsprings[0, :])
+        offsprings[1, :] = self.trimr(offsprings[1, :])
 
         return offsprings
 
@@ -505,7 +505,7 @@ class KMA:
                     self.female[:, i] + ((2 * np.random.rand()) - 1) * max_step[0, i]
                 )
 
-        new_female, _ = self.trimr(
+        new_female = self.trimr(
             new_female
         )  # Limit the values into the given dimensional boundaries
         return new_female
@@ -566,9 +566,9 @@ class KMA:
                     f"new_x shape with a shape of {new_x.shape} in adding_pop is not correct. Must be (1,self.nvar)"
                 )
 
-        new_x, fitness_value = self.trimr(new_x)
+        new_x = self.trimr(new_x)
 
-        new_fx = fitness_value
+        new_fx = self.evaluation(new_x)
 
         if new_fx.shape != (1, 1):
             new_fx = new_fx.reshape(1, -1)
@@ -612,9 +612,9 @@ class KMA:
                     f"temp_x shape with a shape of {temp_x.shape} in reposition is not correct. Must be (1,self.nvar)"
                 )
 
-        temp_x, fitness_value = self.trimr(temp_x)
+        temp_x = self.trimr(temp_x)
 
-        temp_fx = fitness_value
+        temp_fx = self.evaluation(temp_x)
 
         if temp_fx.shape != (1, 1):
             temp_fx = temp_fx.reshape(1, -1)
@@ -697,7 +697,7 @@ class KMA:
                 return FeatureSelection.apply_transfer_function(
                     x, self.transfer_function, self.num_eva, self.max_num_eva
                 )
-            # apply transfer function
+            # apply transfer function if not time varying
             return FeatureSelection.apply_transfer_function(x, self.transfer_function)
 
     def run(
