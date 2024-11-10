@@ -94,7 +94,15 @@ class KMA:
             ArrayOutOfBoundError:
             DivideByZero
         """
-        return FeatureSelection.evaluate(x, self.function_id)
+        # make sure that it's binary, if not, call trimr
+        if not np.all(np.isin(x, [0, 1])):
+            x = self.trimr(x)
+            if not np.all(np.isin(x, [0, 1])):
+                raise ValueError(
+                    "binary_solution must be a binary array (only 0s and 1s)."
+                )
+
+        return FeatureSelection.evaluate(x, self.x_data, self.y_data)
 
     def pop_cons_initialization(self, ps: int) -> np.ndarray:
         """
@@ -177,10 +185,10 @@ class KMA:
 
             # new movement of big males
             new_big_males = np.copy(temp_small_males[ss, :]) + np.copy(vm)
-            new_big_males, fitness_value = self.trimr(new_big_males)
+            new_big_males = self.trimr(new_big_males)
 
             temp_small_males[ss, :] = np.copy(new_big_males)
-            temp_small_males_fx[:, ss] = fitness_value
+            temp_small_males_fx[:, ss] = self.evaluation(new_big_males)
 
         self.big_males, self.big_males_fx = self.replacement(
             self.big_males, self.big_males_fx, temp_small_males, temp_small_males_fx
@@ -197,8 +205,9 @@ class KMA:
 
         if (winner_big_males_fx < self.female_fx) or (np.random.rand() < 0.5):
             offsprings = self.crossover(winner_big_males, self.female)
-            fx1 = self.evaluation(offsprings[0, :].reshape(1, -1)).reshape(1, -1)
-            fx2 = self.evaluation(offsprings[1, :].reshape(1, -1)).reshape(1, -1)
+            test = offsprings[0, :].reshape(1, -1)
+            fx1 = self.evaluation(offsprings[0, :].reshape(1, -1))
+            fx2 = self.evaluation(offsprings[1, :].reshape(1, -1))
 
             # keep the best position of female
             if fx1 < fx2:
@@ -275,6 +284,7 @@ class KMA:
 
             temp_small_males[ss, :] = new_big_males.copy()
             temp_small_males_fx[:, ss] = self.evaluation(new_big_males)
+
         self.big_males, self.big_males_fx = self.replacement(
             self.big_males, self.big_males_fx, temp_small_males, temp_small_males_fx
         )
@@ -1032,4 +1042,4 @@ class KMA:
         # fmean = [0.0] * num_eva
         proc_time = 0.0
         # evo_pop_size = [self.pop_size] * num_eva
-        return best_indiv, opt_val, num_eva, fopt, fmean, proc_time, evo_pop_size
+        return best_indiv, opt_val, self.num_eva, fopt, fmean, proc_time, evo_pop_size

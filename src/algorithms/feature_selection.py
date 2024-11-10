@@ -37,8 +37,8 @@ class FeatureSelection:
             if y.ndim != 2 and y.shape[0] != 1:
                 raise Exception("Shape of the array y is not (1,n_var)")
 
-        # set n_var to y[0].shape
-        n_var = int(y[0].shape[0])
+        # set n_var to x.shape[1]
+        n_var = int(x.shape[1])
 
         # set ub and lb
         ub = 1
@@ -52,77 +52,42 @@ class FeatureSelection:
     def apply_transfer_function(
         x: np.ndarray, function_name: str, num_eva: int = None, max_num_eva: int = None
     ):
-        # trimr x based on the selected transfer function
+        # Compute the transfer function based on the selected type
         match (function_name):
             case "s_shaped_1":
                 """Standard sigmoid function"""
-                return 1 / (1 + np.exp(-2 * x))
+                x_transformed = 1 / (1 + np.exp(-2 * x))
             case "s_shaped_2":
                 """Hyperbolic tangent function"""
-                return 1 / (1 + np.exp(-x))
+                x_transformed = 1 / (1 + np.exp(-x))
             case "s_shaped_3":
                 """Modified sigmoid function"""
-                return 1 / (1 + np.exp(-x / 2))
+                x_transformed = 1 / (1 + np.exp(-x / 2))
             case "v_shaped_1":
-                return abs(2 / np.pi * np.arctan(math.pi / 2 * x))
+                x_transformed = abs(2 / np.pi * np.arctan(math.pi / 2 * x))
             case "v_shaped_2":
                 """Modified absolute value function"""
-                return abs(np.tanh(x))
+                x_transformed = abs(np.tanh(x))
             case "v_shaped_3":
                 """Scaled absolute value function"""
-                return np.abs(x)
+                x_transformed = np.abs(x)
             case "time_varying":
-                if num_eva == None or max_num_eva == None:
+                if num_eva is None or max_num_eva is None:
                     raise ValueError(
                         "num_eva and max_num_eva cannot be empty when using time-varying method"
                     )
-                """Time-varying transfer function"""
-
-                sigma_max = 1
-                sigma_min = 0.1
-
-                sigma = (sigma_max - sigma_min) * (
-                    1 - (num_eva / max_num_eva)
-                ) + sigma_min
-
-                # Sigmoid functions
-                def sigmoid_positive(vd, sigma):
-                    return 1 / (1 + np.exp(-sigma * vd))
-
-                def sigmoid_negative(vd, sigma):
-                    return 1 / (1 + np.exp(sigma * vd))
-
-                p_positive = sigmoid_positive(x, sigma)
-                p_negative = sigmoid_negative(x, sigma)
-
-                # Generate binary positions P_d and P_d' based on the probability thresholds
-                Pd = np.where(np.random.rand(*p_positive.shape) < p_positive, 1, 0)
-
-                Pd_prime = np.where(
-                    np.random.rand(*p_negative.shape) > p_negative, 1, 0
-                )
-
-                # def objective_function(binary_position):
-                #     # TODO: Replace with the actual function
-                #     return np.sum(binary_position)
-
-                # Evaluate each solution
-                fitness_Pd = self.evaluate(Pd)
-                fitness_Pd_prime = self.evaluate(Pd_prime)
-
-                # Select the better solution
-                if fitness_Pd >= fitness_Pd_prime:
-                    return Pd, fitness_Pd
-                else:
-                    return Pd_prime, fitness_Pd_prime
-
+                # TODO
             case _:
                 raise ValueError(
-                    f"Transfer function with the name of {function_name} cannot be implemented"
+                    f"Transfer function with the name '{function_name}' is not recognized"
                 )
 
+        x_binary = (x_transformed >= 0.5).astype(int)
+
+        return x_binary
+
     def evaluate(
-        self, binary_solution: np.ndarray, X_data: np.ndarray, y: np.ndarray
+        binary_solution: np.ndarray, X_data: np.ndarray, y: np.ndarray
     ) -> float:
         """
         Evaluate feature selection solution
@@ -135,6 +100,20 @@ class FeatureSelection:
         Returns:
             float: Evaluation score (lower is better)
         """
+        # make sure that its binary
+        if not np.array_equal(binary_solution, binary_solution.astype(bool)):
+            raise ValueError("binary_solution must be a binary array (only 0s and 1s).")
+
+        # Check if binary_solution is 1D, and reshape if necessary
+        if binary_solution.ndim != 1:
+            binary_solution = binary_solution.flatten()
+
+        # Ensure proper shape for feature selection
+        if X_data.shape[1] != binary_solution.shape[0]:
+            raise ValueError(
+                "The number of features in X_data must match the length of binary_solution."
+            )
+
         # Ensure proper shape
         # Select features based on binary_solution
         selected_features = X_data[:, binary_solution == 1]
@@ -152,4 +131,4 @@ class FeatureSelection:
         ).mean()
 
         # Objective: Minimize 1 - accuracy
-        return 1 - accuracy
+        return 100 - accuracy

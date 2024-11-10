@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from src.algorithms.kma_algorithm import KMA
+from sklearn.datasets import load_breast_cancer
 
 
 class KMADriver:
@@ -80,13 +81,17 @@ if __name__ == "__main__":
     # NOTE: Update dimension based on x_size
     dimension = 50
 
-    X = np.random.rand(100, 10)
-    y = np.random.randint(0, 2, size=100)
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+
+    X_shape = X.shape
+    y_shape = y.shape
 
     max_num_eva = 500
     pop_size = 5
 
     driver = KMADriver(
-        function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
+        function_id, dimension, max_num_eva, pop_size, X, y, "s_shaped_1"
     )
     driver.run()
