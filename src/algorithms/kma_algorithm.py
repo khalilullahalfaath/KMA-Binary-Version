@@ -586,7 +586,7 @@ class KMA:
 
         new_x = self.trimr(new_x)
 
-        new_fx = self.evaluation(new_x)
+        new_fx = np.array(self.evaluation(new_x))
 
         if new_fx.shape != (1, 1):
             new_fx = new_fx.reshape(1, -1)
@@ -632,7 +632,7 @@ class KMA:
 
         temp_x = self.trimr(temp_x)
 
-        temp_fx = self.evaluation(temp_x)
+        temp_fx = np.array(self.evaluation(temp_x))
 
         if temp_fx.shape != (1, 1):
             temp_fx = temp_fx.reshape(1, -1)
