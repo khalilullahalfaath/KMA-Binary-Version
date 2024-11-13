@@ -2,7 +2,8 @@ import numpy as np
 from typing import Tuple, Callable, List
 from dataclasses import dataclass
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
+
+# from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score, f1_score
 import math
 
@@ -82,51 +83,69 @@ class FeatureSelection:
                     f"Transfer function with the name '{function_name}' is not recognized"
                 )
 
-        x_binary = (x_transformed >= 0.5).astype(int)
+        # x_binary = (x_transformed >= 0.5).astype(int)
 
-        return x_binary
+        # # fix the shape of x_binary
+        # if x_binary.ndim != 1:
+        #     x_binary = x_binary.flatten()
+
+        return x_transformed
 
     def evaluate(
-        binary_solution: np.ndarray,
+        x_input: np.ndarray,
         x_train: np.ndarray,
         x_test: np.ndarray,
         y_train: np.ndarray,
         y_test: np.ndarray,
+        alpha: 0.5,
     ) -> float:
         """
         Evaluate feature selection solution
 
         Args:
-            binary_solution: Solution vector indicating selected features (0s and 1s)
+            x_input: Solution vector
             x_train: Training data
             x_test: Test data
             y_train: Training labels
             y_test: Test labels
+            alpha: metric coefficient. Default: 0.5
 
         Returns:
             float: Evaluation score (lower is better)
         """
+        # convert to binary: binarization standard
+
+        # random value
+        treshold = np.random.rand()
+        binary_solution = (x_input >= 0.5).astype(int)
+
+        # fix the shape of binary_solution
+        if binary_solution.ndim != 1:
+            binary_solution = binary_solution.flatten()
+
         # make sure that its binary
         if not np.array_equal(binary_solution, binary_solution.astype(bool)):
             raise ValueError("binary_solution must be a binary array (only 0s and 1s).")
-
-        # Check if binary_solution is 1D, and reshape if necessary
-        if binary_solution.ndim != 1:
-            binary_solution = binary_solution.flatten()
 
         # Ensure proper shape for feature selection
         if x_train.shape[1] != binary_solution.shape[0]:
             raise ValueError(
                 "The number of features in x_train must match the length of binary_solution."
             )
-        
+
         # Select features based on binary_solution
         selected_features_train = x_train[:, binary_solution == 1]
         selected_features_test = x_test[:, binary_solution == 1]
 
-        # If no features are selected, return a high penalty score
-        if selected_features_train.shape[1] == 0:
-            return 1.0  # Maximum penalty, as no features selected
+        # If no features are selected or all the features are selected, return a high penalty score
+        if (
+            selected_features_train.shape[1] == 0
+            or selected_features_train.shape[1] == x_train.shape[1]
+        ):
+            return 1.5  # Maximum penalty, as no features selected or all the features all selected
+
+        # if selected_features_train.shape[1] == 0:
+        #     return 1.0  # Maximum penalty, as no features selected
 
         # Initialize Random Forest Classifier
         clf = RandomForestClassifier(n_estimators=100, random_state=42)
@@ -140,7 +159,14 @@ class FeatureSelection:
         # Evaluate accuracy
         accuracy = accuracy_score(y_test, y_pred)
 
-        print(accuracy)
+        number_selected = selected_features_train.shape[1]
+        number_total = x_train.shape[1]
+
+        fx = accuracy + alpha * (1 - (number_selected / number_total))
+
+        fitness_function = 1.5 - fx
+
+        print(fitness_function)
 
         # Objective: Minimize 1 - accuracy
-        return 1 - accuracy
+        return fitness_function

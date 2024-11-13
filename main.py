@@ -2,6 +2,9 @@ import numpy as np
 import matplotlib.pyplot as plt
 from src.algorithms.kma_algorithm import KMA
 from sklearn.datasets import load_breast_cancer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, f1_score
+from sklearn.model_selection import train_test_split
 
 
 class KMADriver:
@@ -19,6 +22,11 @@ class KMADriver:
         self.dimension = dimension
         self.max_num_eva = max_num_eva
         self.pop_size = pop_size
+
+        if function_id == 0:
+            self.X = X
+            self.y = y
+
         self.kma = KMA(
             function_id, dimension, max_num_eva, pop_size, X, y, transfer_function_name
         )
@@ -27,12 +35,44 @@ class KMADriver:
         best_indiv, opt_val, num_eva, fopt, fmean, proc_time, evo_pop_size = (
             self.kma.run()
         )
-        self.report_results(best_indiv, opt_val, num_eva, proc_time)
+
+        if self.function_id == 0:
+            # get the data
+            # split data
+            X_train, X_test, y_train, y_test = train_test_split(
+                self.X, self.y, test_size=0.2, random_state=42
+            )
+
+            #  convert to binary
+            treshold = np.random.rand()
+            binary_solution = (best_indiv >= 0.5).astype(int)
+
+            # selet the features
+            selected_features_train = X_train[:, binary_solution == 1]
+            selected_features_test = X_test[:, binary_solution == 1]
+
+            # Initialize Random Forest Classifier
+            clf = RandomForestClassifier(n_estimators=100, random_state=42)
+
+            # Fit the model on the training data
+            clf.fit(selected_features_train, y_train)
+
+            # Predict on the test data
+            y_pred = clf.predict(selected_features_test)
+
+            # Evaluate accuracy
+            accuracy = accuracy_score(y_test, y_pred)
+
+        self.report_results(
+            best_indiv, opt_val, num_eva, proc_time, accuracy, binary_solution
+        )
         self.visualize_convergence(fopt, fmean)
         self.visualize_log_convergence(fopt, fmean)
         self.visualize_population_size(evo_pop_size)
 
-    def report_results(self, best_indiv, opt_val, num_eva, proc_time):
+    def report_results(
+        self, best_indiv, opt_val, num_eva, proc_time, accuracy=0, binary_solution=0
+    ):
         print(f"Function              = F{self.function_id}")
         print(f"Dimension             = {self.dimension}")
         print(f"Number of evaluations = {num_eva}")
@@ -40,6 +80,10 @@ class KMADriver:
         print(f"Global optimum        = {self.kma.fthreshold_fx:.10f}")
         print(f"Actual solution       = {opt_val:.10f}")
         print(f"Best individual       = {best_indiv}")
+
+        if function_id == 0:
+            print(f"Binary solution   = {binary_solution}")
+            print(f"Accuracy          = {accuracy}")
 
     def visualize_convergence(self, fopt, fmean):
         plt.figure(figsize=(10, 6))
@@ -95,6 +139,7 @@ if __name__ == "__main__":
         dimension = X_shape[1]
 
         # TODO: Update max_num_eva is necessary
+        max_num_eva = 5000
 
     driver = KMADriver(
         function_id, dimension, max_num_eva, pop_size, X, y, "s_shaped_1"

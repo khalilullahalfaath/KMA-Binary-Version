@@ -91,8 +91,13 @@ class KMA:
         self.fx = None
 
         self.gen = 0
-        self.max_gen_exam1 = 100
-        self.max_gen_exam2 = 1000
+
+        self.max_gen_exam1 = 100  # have tried: 100
+        self.max_gen_exam2 = 1000  # have tried: 1000
+
+        if self.function_id == 0:
+            self.max_gen_exam1 = 10  # have tried: 100
+            self.max_gen_exam2 = 80  # have tried: 1000
         self.num_eva = 0
 
     def evaluation(self, x: np.ndarray) -> float:
@@ -110,16 +115,8 @@ class KMA:
             ArrayOutOfBoundError:
             DivideByZero
         """
-        # make sure that it's binary, if not, call trimr
-        if not np.all(np.isin(x, [0, 1])):
-            x = self.trimr(x)
-            if not np.all(np.isin(x, [0, 1])):
-                raise ValueError(
-                    "binary_solution must be a binary array (only 0s and 1s)."
-                )
-
         return FeatureSelection.evaluate(
-            x, self.X_train, self.X_test, self.y_train, self.y_test
+            x, self.X_train, self.X_test, self.y_train, self.y_test, alpha=0.5
         )
 
     def pop_cons_initialization(self, ps: int) -> np.ndarray:
@@ -166,6 +163,26 @@ class KMA:
                 ss += 1
 
         return x
+
+    # def pop_cons_initialization(self, ps: int) -> np.ndarray:
+    #     """
+    #     Create a completely random population uniformly distributed within the defined bounds.
+
+    #     Args:
+    #         ps: population size
+
+    #     Returns:
+    #         Returns a random population with shape (ps, nvar) uniformly distributed between lb and ub
+    #     """
+    #     # Generate random population using uniform distribution
+    #     # self.rb is lower bound, self.ra is upper bound
+    #     population = np.random.uniform(
+    #         low=self.rb,  # Lower bounds
+    #         high=self.ra,  # Upper bounds
+    #         size=(ps, self.nvar),  # Shape: (population_size, number_of_variables)
+    #     )
+
+    #     return population
 
     def move_big_males_female_first_stage(self):
         """
@@ -245,7 +262,7 @@ class KMA:
             if new_female.shape != (1, self.nvar):
                 new_female = new_female.reshape(1, -1)
 
-                if new_female.shape() != (1, self.nvar):
+                if new_female.shape != (1, self.nvar):
                     raise ValueError("Array female after mutation is not correct")
 
             fx = np.array(self.evaluation(new_female))
@@ -743,6 +760,7 @@ class KMA:
         self.fx = np.zeros((1, self.pop_size))
 
         for i in range(self.pop_size):
+            self.pop[i, :] = self.trimr(self.pop[i, :])
             self.fx[:, i] = self.evaluation(self.pop[i, :])
 
         # print(self.fx)
@@ -1064,6 +1082,6 @@ class KMA:
         # fmean = [0.0] * num_eva
         time_finish = time.time()
 
-        proc_time = time_finish - self.time_start()
+        proc_time = time_finish - self.time_start
         # evo_pop_size = [self.pop_size] * num_eva
         return best_indiv, opt_val, self.num_eva, fopt, fmean, proc_time, evo_pop_size
