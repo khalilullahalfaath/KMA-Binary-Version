@@ -81,11 +81,23 @@ class FeatureSelection:
                 # time-varying variable
                 # t = (num_eva / max_num_eva)
                 t_max = 4
-                t_min = 0.001
+                t_min = 0.0001
 
                 t_var = (1 - (num_eva / max_num_eva)) * t_max + (
                     num_eva / max_num_eva
                 ) * t_min
+
+                # num_eva_fraction = num_eva / max_num_eva
+                # num_eva_fraction = min(
+                #     num_eva_fraction, 1.0
+                # )  # Ensure it doesn't exceed 1.0 due to floating-point precision issues
+
+                # t_var = (1 - num_eva_fraction) * t_max + num_eva_fraction * t_min
+
+                # # Clip t_var to ensure numerical stability
+                # t_var = np.clip(t_var, 1e-3, 10)  # t_var should be within [0.001, 10]
+
+                # print("tvar", t_var)
 
                 # Apply time-varying sigmoid function
                 x_transformed = 1 / (1 + np.exp(-x / t_var))
