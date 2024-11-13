@@ -4,7 +4,6 @@ from src.algorithms.kma_algorithm import KMA
 from sklearn.datasets import load_breast_cancer
 
 
-
 class KMADriver:
     def __init__(
         self,
@@ -79,15 +78,18 @@ if __name__ == "__main__":
     # function id = 0 -> feature selection
     function_id = 0
 
-    # NOTE: Update dimension based on x_size
     dimension = 50
 
-    data = load_breast_cancer()
-    X = data.data
-    y = data.target
+    if function_id == 0:
+        data = load_breast_cancer()
+        X = data.data
+        y = data.target
 
-    X_shape = X.shape
-    y_shape = y.shape
+        X_shape = X.shape
+        y_shape = y.shape
+
+        # NOTE: Update dimension based on x_size
+        dimension = X_shape[1]
 
     max_num_eva = 25000
     pop_size = 5

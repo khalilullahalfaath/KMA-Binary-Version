@@ -119,6 +119,7 @@ class FeatureSelection:
             raise ValueError(
                 "The number of features in x_train must match the length of binary_solution."
             )
+        
         # Select features based on binary_solution
         selected_features_train = x_train[:, binary_solution == 1]
         selected_features_test = x_test[:, binary_solution == 1]
