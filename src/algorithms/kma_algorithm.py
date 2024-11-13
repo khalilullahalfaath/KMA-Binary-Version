@@ -34,8 +34,8 @@ class KMA:
 
         # for feature selection we decrease the adaptive pop_size to save time cost
         if self.function_id == 0:
-            self.min_ada_pop_size = pop_size * 2  # minimum adaptive size
-            self.max_ada_pop_size = pop_size * 8  # maximum adaptive size
+            self.min_ada_pop_size = pop_size * 2  # minimum adaptive size # 2
+            self.max_ada_pop_size = pop_size * 8  # maximum adaptive size # 8
 
         if self.function_id != 0:
             # get a bechmark function
@@ -98,6 +98,7 @@ class KMA:
         if self.function_id == 0:
             self.max_gen_exam1 = 10  # have tried: 100
             self.max_gen_exam2 = 80  # have tried: 1000
+            
         self.num_eva = 0
 
     def evaluation(self, x: np.ndarray) -> float:
