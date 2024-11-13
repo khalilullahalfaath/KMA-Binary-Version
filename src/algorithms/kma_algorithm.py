@@ -217,6 +217,8 @@ class KMA:
             fx1 = self.evaluation(offsprings[0, :].reshape(1, -1))
             fx2 = self.evaluation(offsprings[1, :].reshape(1, -1))
 
+            fx1, fx2 = np.array(fx1), np.array(fx2)
+
             # keep the best position of female
             if fx1 < fx2:
                 if fx1 < self.female_fx:
@@ -310,6 +312,8 @@ class KMA:
             offsprings = self.crossover(winner_big_males, self.female)
             fx1 = self.evaluation(offsprings[0, :].reshape(1, -1))
             fx2 = self.evaluation(offsprings[1, :].reshape(1, -1))
+
+            fx1, fx2 = np.array(fx1), np.array(fx2)
 
             # keep the best position of female
             if fx1 < fx2:
