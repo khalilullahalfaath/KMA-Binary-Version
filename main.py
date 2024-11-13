@@ -45,7 +45,7 @@ class KMADriver:
 
             #  convert to binary
             treshold = np.random.rand()
-            binary_solution = (best_indiv >= 0.5).astype(int)
+            binary_solution = (best_indiv >= treshold).astype(int)
 
             # selet the features
             selected_features_train = X_train[:, binary_solution == 1]
@@ -142,6 +142,6 @@ if __name__ == "__main__":
         max_num_eva = 5000
 
     driver = KMADriver(
-        function_id, dimension, max_num_eva, pop_size, X, y, "s_shaped_1"
+        function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
     )
     driver.run()

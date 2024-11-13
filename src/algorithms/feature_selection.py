@@ -78,6 +78,17 @@ class FeatureSelection:
                         "num_eva and max_num_eva cannot be empty when using time-varying method"
                     )
                 # TODO
+                # time-varying variable
+                # t = (num_eva / max_num_eva)
+                t_max = 1
+                t_min = 0
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                # Apply time-varying sigmoid function
+                x_transformed = 1 / (1 + np.exp(-x / t_var))
             case _:
                 raise ValueError(
                     f"Transfer function with the name '{function_name}' is not recognized"
@@ -117,7 +128,7 @@ class FeatureSelection:
 
         # random value
         treshold = np.random.rand()
-        binary_solution = (x_input >= 0.5).astype(int)
+        binary_solution = (x_input >= treshold).astype(int)
 
         # fix the shape of binary_solution
         if binary_solution.ndim != 1:
