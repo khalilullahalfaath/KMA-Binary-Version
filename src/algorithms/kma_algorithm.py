@@ -760,7 +760,7 @@ class KMA:
         self.fx = np.zeros((1, self.pop_size))
 
         for i in range(self.pop_size):
-            self.pop[i, :] = self.trimr(self.pop[i, :])
+            # self.pop[i, :] = self.trimr(self.pop[i, :])
             self.fx[:, i] = self.evaluation(self.pop[i, :])
 
         # print(self.fx)

@@ -44,8 +44,10 @@ class KMADriver:
             )
 
             #  convert to binary
-            treshold = np.random.rand()
-            binary_solution = (best_indiv >= treshold).astype(int)
+            best_indiv = np.array(best_indiv)  # Ensure x_input is a NumPy array
+            binary_solution = (best_indiv >= np.random.rand(len(best_indiv))).astype(
+                int
+            )
 
             # selet the features
             selected_features_train = X_train[:, binary_solution == 1]
@@ -139,7 +141,7 @@ if __name__ == "__main__":
         dimension = X_shape[1]
 
         # TODO: Update max_num_eva is necessary
-        max_num_eva = 5000
+        max_num_eva = 2500
 
     driver = KMADriver(
         function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"

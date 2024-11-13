@@ -80,8 +80,8 @@ class FeatureSelection:
                 # TODO
                 # time-varying variable
                 # t = (num_eva / max_num_eva)
-                t_max = 1
-                t_min = 0
+                t_max = 4
+                t_min = 0.001
 
                 t_var = (1 - (num_eva / max_num_eva)) * t_max + (
                     num_eva / max_num_eva
@@ -108,7 +108,7 @@ class FeatureSelection:
         x_test: np.ndarray,
         y_train: np.ndarray,
         y_test: np.ndarray,
-        alpha: 0.5,
+        alpha: 0.99,
     ) -> float:
         """
         Evaluate feature selection solution
@@ -127,8 +127,8 @@ class FeatureSelection:
         # convert to binary: binarization standard
 
         # random value
-        treshold = np.random.rand()
-        binary_solution = (x_input >= treshold).astype(int)
+        x_input = np.array(x_input)  # Ensure x_input is a NumPy array
+        binary_solution = (x_input >= np.random.rand(len(x_input))).astype(int)
 
         # fix the shape of binary_solution
         if binary_solution.ndim != 1:
@@ -153,7 +153,7 @@ class FeatureSelection:
             selected_features_train.shape[1] == 0
             or selected_features_train.shape[1] == x_train.shape[1]
         ):
-            return 1.5  # Maximum penalty, as no features selected or all the features all selected
+            return 20  # Maximum penalty, as no features selected or all the features all selected
 
         # if selected_features_train.shape[1] == 0:
         #     return 1.0  # Maximum penalty, as no features selected
@@ -175,7 +175,7 @@ class FeatureSelection:
 
         fx = accuracy + alpha * (1 - (number_selected / number_total))
 
-        fitness_function = 1.5 - fx
+        fitness_function = 2 - fx
 
         print(fitness_function)
 
