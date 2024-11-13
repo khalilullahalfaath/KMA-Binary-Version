@@ -127,7 +127,7 @@ if __name__ == "__main__":
     dimension = 50
 
     max_num_eva = 25000
-    pop_size = 10
+    pop_size = 5
 
     if function_id == 0:
         data = load_breast_cancer()
