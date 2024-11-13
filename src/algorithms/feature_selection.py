@@ -46,7 +46,7 @@ class FeatureSelection:
         lb = 0
 
         # assume that min_val is 0
-        min_val = 0
+        min_val = -1.9603
 
         return n_var, ub, lb, min_val
 
@@ -187,9 +187,9 @@ class FeatureSelection:
 
         fx = accuracy + alpha * (1 - (number_selected / number_total))
 
-        fitness_function = 2 - fx
+        fitness_function = -fx
 
         print(fitness_function)
 
-        # Objective: Minimize 1 - accuracy
+        # Objective: Minimize
         return fitness_function

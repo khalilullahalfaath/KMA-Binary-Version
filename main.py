@@ -65,15 +65,37 @@ class KMADriver:
             # Evaluate accuracy
             accuracy = accuracy_score(y_test, y_pred)
 
+            number_selected = selected_features_train.shape[1]
+            number_total = X_train.shape[1]
+
+            alpha = 0.99
+
+            fx = accuracy + alpha * (1 - (number_selected / number_total))
+
+            fitness_value = -fx
+
         self.report_results(
-            best_indiv, opt_val, num_eva, proc_time, accuracy, binary_solution
+            best_indiv,
+            opt_val,
+            num_eva,
+            proc_time,
+            accuracy,
+            binary_solution,
+            fitness_value,
         )
         self.visualize_convergence(fopt, fmean)
         self.visualize_log_convergence(fopt, fmean)
         self.visualize_population_size(evo_pop_size)
 
     def report_results(
-        self, best_indiv, opt_val, num_eva, proc_time, accuracy=0, binary_solution=0
+        self,
+        best_indiv,
+        opt_val,
+        num_eva,
+        proc_time,
+        accuracy=0,
+        binary_solution=0,
+        fitness_value=0,
     ):
         print(f"Function              = F{self.function_id}")
         print(f"Dimension             = {self.dimension}")
@@ -86,6 +108,7 @@ class KMADriver:
         if function_id == 0:
             print(f"Binary solution   = {binary_solution}")
             print(f"Accuracy          = {accuracy}")
+            print(f"Fitness value     = {-fitness_value}")
 
     def visualize_convergence(self, fopt, fmean):
         plt.figure(figsize=(10, 6))
@@ -141,7 +164,7 @@ if __name__ == "__main__":
         dimension = X_shape[1]
 
         # TODO: Update max_num_eva is necessary
-        max_num_eva = 2500
+        max_num_eva = 5000
 
     driver = KMADriver(
         function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
