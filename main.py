@@ -80,6 +80,9 @@ if __name__ == "__main__":
 
     dimension = 50
 
+    max_num_eva = 25000
+    pop_size = 5
+
     if function_id == 0:
         data = load_breast_cancer()
         X = data.data
@@ -91,8 +94,7 @@ if __name__ == "__main__":
         # NOTE: Update dimension based on x_size
         dimension = X_shape[1]
 
-    max_num_eva = 25000
-    pop_size = 5
+        # TODO: Update max_num_eva is necessary
 
     driver = KMADriver(
         function_id, dimension, max_num_eva, pop_size, X, y, "s_shaped_1"

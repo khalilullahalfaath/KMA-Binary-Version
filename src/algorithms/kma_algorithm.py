@@ -6,6 +6,8 @@ from src.algorithms.feature_selection import FeatureSelection
 import math
 from sklearn.model_selection import train_test_split
 
+import time
+
 
 class KMA:
     def __init__(
@@ -18,6 +20,9 @@ class KMA:
         y_data: np.ndarray = None,
         transfer_function: str = "",
     ):
+        # capture time
+        self.time_start = time.time()
+
         self.function_id = function_id  # identity of the benchmark function
         self.dimension = (
             dimension  # dimension can be scaled up to thousands for the functions
@@ -26,6 +31,11 @@ class KMA:
         self.pop_size = pop_size  # population size (number of komodo individuals)
         self.min_ada_pop_size = pop_size * 4  # minimum adaptive size
         self.max_ada_pop_size = pop_size * 40  # maximum adaptive size
+
+        # for feature selection we decrease the adaptive pop_size to save time cost
+        if self.function_id == 0:
+            self.min_ada_pop_size = pop_size * 2  # minimum adaptive size
+            self.max_ada_pop_size = pop_size * 8  # maximum adaptive size
 
         if self.function_id != 0:
             # get a bechmark function
@@ -1052,6 +1062,8 @@ class KMA:
         # num_eva = self.max_num_eva
         # fopt = [0.0] * num_eva
         # fmean = [0.0] * num_eva
-        proc_time = 0.0
+        time_finish = time.time()
+
+        proc_time = time_finish - self.time_start()
         # evo_pop_size = [self.pop_size] * num_eva
         return best_indiv, opt_val, self.num_eva, fopt, fmean, proc_time, evo_pop_size
