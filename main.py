@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import os
 from src.algorithms.kma_algorithm import KMA
 from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestClassifier
@@ -31,10 +33,22 @@ class KMADriver:
             function_id, dimension, max_num_eva, pop_size, X, y, transfer_function_name
         )
 
-    def run(self):
+    def run(self, experiment_number=None):
         best_indiv, opt_val, num_eva, fopt, fmean, proc_time, evo_pop_size = (
             self.kma.run()
         )
+
+        results = {
+            "Experiment": experiment_number,
+            "Function_ID": self.function_id,
+            "Dimension": self.dimension,
+            "Number_of_Evaluations": num_eva,
+            "Processing_Time": proc_time,
+            "Global_Optimum": self.kma.fthreshold_fx,
+            "Actual_Solution": opt_val,
+            "Fitness_Optimum": str(fopt.tolist()),
+            "Fitness_Mean": str(fmean.tolist()),
+        }
 
         if self.function_id == 0:
             # get the data
@@ -48,6 +62,8 @@ class KMADriver:
             binary_solution = (best_indiv >= np.random.rand(len(best_indiv))).astype(
                 int
             )
+
+            # buat if, bestindiv -> if each position is 0 -> random pilih index acak (2 atau 3)
 
             # selet the features
             selected_features_train = X_train[:, binary_solution == 1]
@@ -74,6 +90,22 @@ class KMADriver:
 
             fitness_value = -fx
 
+            # Update results dictionary
+            results.update(
+                {
+                    "Binary_Solution": str(binary_solution.tolist()),
+                    "Number_Selected_Features": number_selected,
+                    "Total_Features": number_total,
+                    "Accuracy": accuracy,
+                    "Fitness_Value": -fitness_value,
+                }
+            )
+
+            print(results.keys())
+
+        # Save results to CSV
+        self.save_results_to_csv(results)
+
         self.report_results(
             best_indiv,
             opt_val,
@@ -83,9 +115,22 @@ class KMADriver:
             binary_solution,
             fitness_value,
         )
-        self.visualize_convergence(fopt, fmean)
-        self.visualize_log_convergence(fopt, fmean)
-        self.visualize_population_size(evo_pop_size)
+        # self.visualize_convergence(fopt, fmean)
+        # self.visualize_log_convergence(fopt, fmean)
+        # self.visualize_population_size(evo_pop_size)
+
+    def save_results_to_csv(self, results):
+        """Save experiment results to a CSV file, appending if file exists."""
+        csv_path = "kma_experiments_results.csv"
+
+        # Check if file exists to determine whether to write header
+        file_exists = os.path.exists(csv_path)
+
+        # Convert results to DataFrame
+        results_df = pd.DataFrame([results])
+
+        # Append to CSV, write header only if file doesn't exist
+        results_df.to_csv(csv_path, mode="a", header=not file_exists, index=False)
 
     def report_results(
         self,
@@ -105,11 +150,12 @@ class KMADriver:
         print(f"Actual solution       = {opt_val:.10f}")
         print(f"Best individual       = {best_indiv}")
 
-        if function_id == 0:
+        if self.function_id == 0:
             print(f"Binary solution   = {binary_solution}")
             print(f"Accuracy          = {accuracy}")
             print(f"Fitness value     = {-fitness_value}")
 
+    # Rest of the methods remain the same as in the original script
     def visualize_convergence(self, fopt, fmean):
         plt.figure(figsize=(10, 6))
         plt.plot(fopt, "r-", label="Best fitness")
@@ -166,7 +212,10 @@ if __name__ == "__main__":
         # TODO: Update max_num_eva is necessary
         max_num_eva = 5000
 
-    driver = KMADriver(
-        function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
-    )
-    driver.run()
+    # Run 15 experiments
+    for experiment in range(1, 16):
+        print(f"\n--- Experiment {experiment} ---")
+        driver = KMADriver(
+            function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
+        )
+        driver.run(experiment_number=experiment)

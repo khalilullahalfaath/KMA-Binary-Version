@@ -80,8 +80,9 @@ class FeatureSelection:
                 # TODO
                 # time-varying variable
                 # t = (num_eva / max_num_eva)
+
                 t_max = 4
-                t_min = 0.0001
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
 
                 t_var = (1 - (num_eva / max_num_eva)) * t_max + (
                     num_eva / max_num_eva
@@ -100,6 +101,7 @@ class FeatureSelection:
                 # print("tvar", t_var)
 
                 # Apply time-varying sigmoid function
+                print("exp:", -x / t_var)
                 x_transformed = 1 / (1 + np.exp(-x / t_var))
             case _:
                 raise ValueError(
@@ -165,6 +167,7 @@ class FeatureSelection:
             selected_features_train.shape[1] == 0
             or selected_features_train.shape[1] == x_train.shape[1]
         ):
+            # TODO: Acak posisi 2 atau 3, hanya untuk random binary. Jangan kasih penalty
             return 20  # Maximum penalty, as no features selected or all the features all selected
 
         # if selected_features_train.shape[1] == 0:
