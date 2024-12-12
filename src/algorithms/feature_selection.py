@@ -162,19 +162,22 @@ class FeatureSelection:
         selected_features_train = x_train[:, binary_solution == 1]
         selected_features_test = x_test[:, binary_solution == 1]
 
-        # If no features are selected or all the features are selected, return a high penalty score
+        # If no features are selected or all the features are selected, return a randomized index
         if (
             selected_features_train.shape[1] == 0
             or selected_features_train.shape[1] == x_train.shape[1]
         ):
-            # TODO: Acak posisi 2 atau 3, hanya untuk random binary. Jangan kasih penalty
-            return 20  # Maximum penalty, as no features selected or all the features all selected
+            # Randomly select 2 or 3 positions to mutate in selected_features_train
+            n = selected_features_train.shape[1]
+            num_positions = np.random.choice([2, 3])
+            positions_to_change = np.random.choice(n, num_positions, replace=False)
 
-        # if selected_features_train.shape[1] == 0:
-        #     return 1.0  # Maximum penalty, as no features selected
+            # Flip values at selected positions
+            for pos in positions_to_change:
+                selected_features_train[:, pos] = 1 - selected_features_train[:, pos]
 
         # Initialize Random Forest Classifier
-        clf = RandomForestClassifier(n_estimators=100, random_state=42)
+        clf = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=42)
 
         # Fit the model on the training data
         clf.fit(selected_features_train, y_train)
