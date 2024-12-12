@@ -121,7 +121,7 @@ class KMADriver:
 
     def save_results_to_csv(self, results):
         """Save experiment results to a CSV file, appending if file exists."""
-        csv_path = "kma_experiments_results.csv"
+        csv_path = "kma_experiments_results_max_depth_3.csv"
 
         # Check if file exists to determine whether to write header
         file_exists = os.path.exists(csv_path)
@@ -213,7 +213,7 @@ if __name__ == "__main__":
         max_num_eva = 5000
 
     # Run 15 experiments
-    for experiment in range(1, 16):
+    for experiment in range(1, 6):
         print(f"\n--- Experiment {experiment} ---")
         driver = KMADriver(
             function_id, dimension, max_num_eva, pop_size, X, y, "time_varying"
