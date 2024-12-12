@@ -162,19 +162,22 @@ class FeatureSelection:
         selected_features_train = x_train[:, binary_solution == 1]
         selected_features_test = x_test[:, binary_solution == 1]
 
-        # If no features are selected or all the features are selected, return a randomized index
+        # If no features are selected or all the features are selected, create a randomized index
         if (
             selected_features_train.shape[1] == 0
             or selected_features_train.shape[1] == x_train.shape[1]
         ):
-            # Randomly select 2 or 3 positions to mutate in selected_features_train
-            n = selected_features_train.shape[1]
             num_positions = np.random.choice([2, 3])
-            positions_to_change = np.random.choice(n, num_positions, replace=False)
+            n = x_train.shape[1]
 
-            # Flip values at selected positions
-            for pos in positions_to_change:
-                selected_features_train[:, pos] = 1 - selected_features_train[:, pos]
+            if selected_features_train.shape[1] == 0:
+                # If no features selected, randomly select features
+                positions_to_change = np.random.choice(n, num_positions, replace=False)
+                selected_features_train[:, positions_to_change] = 1
+            else:
+                # If all features selected, randomly deselect features
+                positions_to_change = np.random.choice(n, num_positions, replace=False)
+                selected_features_train[:, positions_to_change] = 0
 
         # Initialize Random Forest Classifier
         clf = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=42)
