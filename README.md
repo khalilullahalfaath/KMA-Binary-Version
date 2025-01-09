@@ -1,6 +1,6 @@
 # Komodo-Mlipir Algorithm (Binary Version)
 
-The **Komodo-Mlipir Algorithm** is a metaheuristic-based optimization algorithm designed to find the optimum value of a function. This repository contains the binary version of the algorithm, adapted from the original [MATLAB implementation](https://www.mathworks.com/matlabcentral/fileexchange/102514-komodo-mlipir-algorithm). specifically modified for feature selection problems.
+The **Komodo-Mlipir Algorithm** is a metaheuristic-based optimization algorithm designed to find the optimum value of a function. This repository contains the binary version of the algorithm, adapted from the original [MATLAB implementation](https://www.mathworks.com/matlabcentral/fileexchange/102514-komodo-mlipir-algorithm) and specifically modified for feature selection problems.
 
 ## Current Development
 1. Specific implementation for feature selection.
