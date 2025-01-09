@@ -6,6 +6,7 @@ from sklearn.ensemble import RandomForestClassifier
 # from sklearn.model_selection import cross_val_score
 from sklearn.metrics import accuracy_score, f1_score
 import math
+from scipy.special import erf
 
 
 class FeatureSelection:
@@ -45,7 +46,7 @@ class FeatureSelection:
         ub = 1
         lb = 0
 
-        # assume that min_val is 0
+        # assume that min_val is -1.96
         min_val = -1.9603
 
         return n_var, ub, lb, min_val
@@ -56,23 +57,30 @@ class FeatureSelection:
         # Compute the transfer function based on the selected type
         match (function_name):
             case "s_shaped_1":
-                """Standard sigmoid function"""
+                """T(x) = 1 / (1+e^-2*x)"""
                 x_transformed = 1 / (1 + np.exp(-2 * x))
             case "s_shaped_2":
-                """Hyperbolic tangent function"""
+                """T(x) = 1 / (1+e^-x)"""
                 x_transformed = 1 / (1 + np.exp(-x))
             case "s_shaped_3":
-                """Modified sigmoid function"""
+                """T(x) = 1 / (1+e^-x/2)"""
                 x_transformed = 1 / (1 + np.exp(-x / 2))
+            case "s_shaped_4":
+                """T(x) = 1 / (1+e^-x/3)"""
+                x_transformed = 1 / (1 + np.exp(-x / 3))
             case "v_shaped_1":
-                x_transformed = abs(2 / np.pi * np.arctan(math.pi / 2 * x))
+                """T(x) = |erf(sqrt(pi)/2 * x)|"""
+                x_transformed = np.abs(erf(np.sqrt(np.pi) / 2 * x))
             case "v_shaped_2":
-                """Modified absolute value function"""
-                x_transformed = abs(np.tanh(x))
+                """T(x) = |tanh(x)|"""
+                x_transformed = np.abs(np.tanh(x))
             case "v_shaped_3":
-                """Scaled absolute value function"""
-                x_transformed = np.abs(x)
-            case "time_varying":
+                """T(x) = |x/(sqrt(1+x^2))|"""
+                x_transformed = np.abs(x / np.sqrt(1 + x * x))
+            case "v_shaped_4":
+                """T(x) = |2 / pi * arctan(pi/2* x)|"""
+                x_transformed = np.abs(2 / np.pi * np.arctan(math.pi / 2 * x))
+            case "time_varying_s1":
                 if num_eva is None or max_num_eva is None:
                     raise ValueError(
                         "num_eva and max_num_eva cannot be empty when using time-varying method"
@@ -88,21 +96,122 @@ class FeatureSelection:
                     num_eva / max_num_eva
                 ) * t_min
 
-                # num_eva_fraction = num_eva / max_num_eva
-                # num_eva_fraction = min(
-                #     num_eva_fraction, 1.0
-                # )  # Ensure it doesn't exceed 1.0 due to floating-point precision issues
+                x_transformed = 1 / (1 + np.exp(-2 * x / t_var))
+            case "time_varying_s2":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
 
-                # t_var = (1 - num_eva_fraction) * t_max + num_eva_fraction * t_min
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
 
-                # # Clip t_var to ensure numerical stability
-                # t_var = np.clip(t_var, 1e-3, 10)  # t_var should be within [0.001, 10]
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
 
-                # print("tvar", t_var)
-
-                # Apply time-varying sigmoid function
-                print("exp:", -x / t_var)
                 x_transformed = 1 / (1 + np.exp(-x / t_var))
+            case "time_varying_s3":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
+
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                x_transformed = 1 / (1 + np.exp(-x / (2 * t_var)))
+            case "time_varying_s4":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
+
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                x_transformed = 1 / (1 + np.exp(-x / (3 * t_var)))
+            case "time_varying_v1":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
+
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                x_transformed = np.where(
+                x <= 0,
+                1 - (2 / (1 + np.exp(-2 * x / t_var))),
+                (2 / (1 + np.exp(-2 * x / t_var))) - 1
+                )
+            case "time_varying_v2":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
+
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                x_transformed = np.where(
+                    x <= 0,
+                    1 - (2 / (1 + np.exp(-x / t_var))),
+                    (2 / (1 + np.exp(-x / t_var))) - 1
+                )
+            case "time_varying_v3":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
+
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                x_transformed = np.where(
+                    x <= 0,
+                    1 - (2 / (1 + np.exp(-x / (2 * t_var)))),
+                    (2 / (1 + np.exp(-x / (2 * t_var)))) - 1
+                )
+            case "time_varying_v4":
+                if num_eva is None or max_num_eva is None:
+                    raise ValueError(
+                        "num_eva and max_num_eva cannot be empty when using time-varying method"
+                    )
+
+                t_max = 4
+                t_min = 0.0001  # TODO: Ubah ke 0.01 atau 0.001
+
+                t_var = (1 - (num_eva / max_num_eva)) * t_max + (
+                    num_eva / max_num_eva
+                ) * t_min
+
+                
+                x_transformed = np.where(
+                    x <= 0,
+                    1 - (2 / (1 + np.exp(-x / (3 * t_var)))),
+                    (2 / (1 + np.exp(-x / (3 * t_var)))) - 1
+                )
             case _:
                 raise ValueError(
                     f"Transfer function with the name '{function_name}' is not recognized"
@@ -170,10 +279,14 @@ class FeatureSelection:
             if selected_features_train.shape[1] == 0:
                 # If no features selected, randomly select features
                 positions_to_change = np.random.choice(n, num_positions, replace=False)
-                selected_features_train[:, positions_to_change] = 1
+                binary_solution[positions_to_change] = 1
+
+                # reselect features
+                selected_features_train = x_train[:, binary_solution == 1]
+                selected_features_test = x_test[:, binary_solution == 1]
 
         # Initialize Random Forest Classifier
-        clf = RandomForestClassifier(n_estimators=100, max_depth=3, random_state=42)
+        clf = RandomForestClassifier(n_estimators=100, max_depth=5, random_state=42)
 
         # Fit the model on the training data
         clf.fit(selected_features_train, y_train)

@@ -19,6 +19,10 @@ class KMA:
         x_data: np.ndarray = None,
         y_data: np.ndarray = None,
         transfer_function: str = "",
+        min_adaptive_size: int = None,
+        max_adaptive_size: int = None,
+        max_gen_exam1: int = None,
+        max_gen_exam2: int = None,
     ):
         # capture time
         self.time_start = time.time()
@@ -31,11 +35,6 @@ class KMA:
         self.pop_size = pop_size  # population size (number of komodo individuals)
         self.min_ada_pop_size = pop_size * 4  # minimum adaptive size
         self.max_ada_pop_size = pop_size * 40  # maximum adaptive size
-
-        # for feature selection we decrease the adaptive pop_size to save time cost
-        if self.function_id == 0:
-            self.min_ada_pop_size = pop_size * 2  # minimum adaptive size # 2
-            self.max_ada_pop_size = pop_size * 8  # maximum adaptive size # 8
 
         if self.function_id != 0:
             # get a bechmark function
@@ -96,9 +95,11 @@ class KMA:
         self.max_gen_exam2 = 1000  # have tried: 1000
 
         if self.function_id == 0:
-            self.max_gen_exam1 = 10  # have tried: 100
-            self.max_gen_exam2 = 80  # have tried: 1000
-            
+            self.min_ada_pop_size = pop_size * min_adaptive_size
+            self.max_ada_pop_size = pop_size * max_adaptive_size
+            self.max_gen_exam1 = max_gen_exam1  # have tried: 100
+            self.max_gen_exam2 = max_gen_exam2  # have tried: 1000
+
         self.num_eva = 0
 
     def evaluation(self, x: np.ndarray) -> float:
@@ -743,7 +744,7 @@ class KMA:
         if self.function_id != 0:
             return np.clip(x, self.rb, self.ra), None
         else:
-            if self.transfer_function == "time_varying":
+            if "time_varying" in self.transfer_function:
                 return FeatureSelection.apply_transfer_function(
                     x, self.transfer_function, self.num_eva, self.max_num_eva
                 )
